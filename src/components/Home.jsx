@@ -311,7 +311,7 @@ const Home = ({ marketplace, account, sendTra, connectedNetwork }) => {
                       <h5 className="text-xl font-semibold text-blue-600 dark:text-blue-400">{item.name}</h5>
                       <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
                         {/* <strong>1 TRX</strong> */}
-                        <strong>{Number(item.totalPrice)} TRX</strong>
+                        <strong>{Number(item.totalPrice) / 10**18} frxETH</strong>
                       </p>
 
                       {connectedNetwork && <button onClick={() => viewMarketItem(item)} className="mt-4 w-full px-4 py-2 text-sm font-medium leading-5 text-white transition-transform transform duration-300 bg-gradient-to-r from-blue-500 to-purple-600 border border-transparent rounded-lg shadow-lg hover:scale-105 hover:from-blue-600 hover:to-purple-700 focus:outline-none focus:ring-4 focus:ring-blue-300">

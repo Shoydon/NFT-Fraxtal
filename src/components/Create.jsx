@@ -56,6 +56,7 @@ const Create = ({ marketplace, account, correctNetwork }) => {
       cidVersion: 0,
     })
     jsonformData.append('pinataOptions', options);
+    toast.info("Uploading Image and Video", { position: "top-center" });
 
     try {
 
@@ -91,7 +92,7 @@ const Create = ({ marketplace, account, correctNetwork }) => {
         description: forminfo.description,
         image: ImgHash,
         video: videoHash,
-        price: forminfo.price
+        price: (forminfo.price * 10**18)
       }
 
       async function pinJSONToPinata(info) {
@@ -114,7 +115,7 @@ const Create = ({ marketplace, account, correctNetwork }) => {
       }
 
       pinJSONToPinata(info)
-
+      toast.success("Uploaded Image and Video successfully. Now minting NFT", { position: "top-center" });
       //   setFormInfo({
       //       title:"",
       //       description:"",
@@ -135,7 +136,7 @@ const Create = ({ marketplace, account, correctNetwork }) => {
     const itemCounts = await marketplace.methods.itemCount().call();
     const itemCount = itemCounts.toString();
     try {
-      toast.info("Confirm to Mint the NFT", { position: "top-center" });
+      toast.info("Confirm to Mint the NFT and wait till transaction confirms.", { position: "top-center" });
 
       // Convert TRX to Sun (smallest TRX unit)
 
@@ -151,7 +152,7 @@ const Create = ({ marketplace, account, correctNetwork }) => {
       //     shouldPollResponse: true,
       // });
 
-      toast.info("Wait till transaction Confirms....", { position: "top-center" });
+      // toast.info("Wait till transaction Confirms....", { position: "top-center" });
 
       // Wait for transaction confirmation
       // await tx1.wait();
@@ -219,7 +220,7 @@ const Create = ({ marketplace, account, correctNetwork }) => {
                   size="lg"
                   required
                   type="number"
-                  placeholder="Price in TRX"
+                  placeholder="Price in frxETH"
                   className="text-lg"
                 />
                 <div className="flex justify-center">
