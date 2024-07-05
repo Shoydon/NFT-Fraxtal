@@ -19,6 +19,7 @@ function App() {
   const [account, setAccount] = useState(null);
   const [marketplace, setMarketplace] = useState({});
   const [nftItem, setNFTItem] = useState({});
+  const [correctNetwork, setCorrectNetwork] = useState(false);
   const [connecteds, setConnecteds] = useState(false);
   const [fistTime, setFirstTime] = useState(false);
   const marketplace_abi = contractData.abi;
@@ -57,6 +58,7 @@ function App() {
               `Connected to the correct network with chain ID ${expectedChainId}`
             );
             setConnecteds(true);
+            setCorrectNetwork(true);
           } else {
             console.log(
               `Connected to a network with chain ID ${chainId}. Expected chain ID is ${expectedChainId}`
@@ -72,9 +74,10 @@ function App() {
       console.log("Metamask not installed: ", error);
     }
 
-    const acc = await window.ethereum.request({
+    const accounts = await window.ethereum.request({
       method: "eth_requestAccounts",
     });
+    const acc = accounts[0]
     try {
       const web3 = await window.ethereum;
       // const tronWeb = await tron.tronWeb;
@@ -106,7 +109,8 @@ function App() {
   const initiContract = async () => {
     try {
       // const web3 = window.ethereum;
-      const web3 = new Web3('https://rpc.testnet.fraxtal.com');
+      const web3 = new Web3(window.ethereum);
+      // const web3 = new Web3('https://rpc.testnet.fraxtal.com');
       // const tronWeb = tron.tronWeb;
       const marketplace = new web3.eth.Contract(marketplace_abi, marketplace_addr);
       console.log(marketplace);
@@ -120,7 +124,7 @@ function App() {
 
   const sendTra = async (ownerad, price) => {
     try {
-      const web3 = window.ethereum;
+      const web3 = new Web3(window.ethereum);
       // const tronWeb = tron.tronWeb;
       const toAddress = ownerad.toString();
       console.log("To Adress", toAddress);
@@ -128,10 +132,12 @@ function App() {
       const amountInSun = price;
       // const amountInHex = tronWeb.toHex(amountInSun);
       const txObject = {
-        from: web3.eth.defaultAccount, // Use the default account provided by MetaMask or set it explicitly
+        from: account, // Use the default account provided by MetaMask or set it explicitly
+        // from: web3.eth.defaultAccount, // Use the default account provided by MetaMask or set it explicitly
         to: toAddress,
         value: amountInSun,
       };
+      // const tx = await web3.eth
       const tx = await web3.eth
         .sendTransaction(txObject)
         .on("transactionHash", function (hash) {
@@ -148,6 +154,9 @@ function App() {
 
   return (
     <>
+      {!correctNetwork && (
+        <ChangeNetwork />
+      )}
       <BrowserRouter>
         <ToastContainer />
         <div className="App font-jersey-25">
@@ -159,37 +168,36 @@ function App() {
               checkTronLink={checkTronLink}
               loading={loading}
             />
-            {connecteds ? (
-              <>
-                {loading && !fistTime ? (
-                  <First loading={loading} />
-                ) : (
-                  <Routes>
-                    <Route path="/" element={<First loading={loading} />} />
-                    <Route
-                      path="/home"
-                      element={
-                        <Hero
-                          marketplace={marketplace}
-                          nftItem={nftItem}
-                          account={account}
-                          sendTra={sendTra}
-                        />
-                      }
-                    />
-                    <Route
-                      path="/create"
-                      element={<Create marketplace={marketplace} />}
-                    />
-                    {/* <Route path='/my-listed-nfts' element={<MyItem marketplace={marketplace} account={account} />} /> */}
-                    {/* <Route path='/my-purchases' element={<MyPurchases marketplace={marketplace} nft={nft} account={account} />} /> */}
-                    {/* <Route path='/my-purchases' element={<Purchaes marketplace={marketplace} account={account} />} /> */}
-                  </Routes>
-                )}
-              </>
-            ) : (
-              <ChangeNetwork />
-            )}
+
+            <>
+              {loading && !fistTime ? (
+                <First loading={loading} />
+              ) : (
+                <Routes>
+                  <Route path="/" element={<First loading={loading} />} />
+                  <Route
+                    path="/home"
+                    element={
+                      <Hero
+                        marketplace={marketplace}
+                        nftItem={nftItem}
+                        account={account}
+                        sendTra={sendTra}
+                        connectedNetwork={correctNetwork}
+                      />
+                    }
+                  />
+                  <Route
+                    path="/create"
+                    element={<Create marketplace={marketplace} account={account} correctNetwork={correctNetwork} />}
+                  />
+                  {/* <Route path='/my-listed-nfts' element={<MyItem marketplace={marketplace} account={account} />} /> */}
+                  {/* <Route path='/my-purchases' element={<MyPurchases marketplace={marketplace} nft={nft} account={account} />} /> */}
+                  {/* <Route path='/my-purchases' element={<Purchaes marketplace={marketplace} account={account} />} /> */}
+                </Routes>
+              )}
+            </>
+
           </div>
         </div>
       </BrowserRouter>

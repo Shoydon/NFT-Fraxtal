@@ -121,13 +121,16 @@
 
 
 import { useState, useEffect } from 'react';
-import { ethers } from "ethers";
+// import { ethers } from "ethers";
 import Info from './Info';
 import { toast } from 'react-toastify';
+import Web3 from 'web3';
+import ChangeNetwork from './changeNetwork';
 
-const Home = ({ marketplace, account, sendTra }) => {
+const Home = ({ marketplace, account, sendTra, connectedNetwork }) => {
   useEffect(() => {
     document.title = "Home";
+    console.log(marketplace);
   }, []);
 
   const [loading, setLoading] = useState(true);
@@ -139,18 +142,21 @@ const Home = ({ marketplace, account, sendTra }) => {
 
     console.log("Insside  of Load MarketPlace Items");
     try {
-      const itemCounts = await marketplace.itemCount().call();
-      const itemCount = itemCounts.toString();
+      const itemCounts = await marketplace.methods.itemCount().call();
+      const itemCount = Number(itemCounts);
       console.log("Itemcount App", itemCount);
       let items = [];
       console.log("Before for");
       for (let i = 1; i <= itemCount; i++) {
-        const item = await marketplace.items(i).call();
+        const item = await marketplace.methods.items(i).call();
+        console.log(item);
         if (!item.sold) {
-          const uri = await marketplace.tokenURIs(item.tokenId).call();
+          const uri = await marketplace.methods.tokenURIs(item.tokenId).call();
+          console.log(uri);
           const response = await fetch(uri);
+          console.log(response);
           const metadata = await response.json();
-          const totalPrice = await marketplace.getTotalPrice(item.itemId).call();
+          const totalPrice = await marketplace.methods.getTotalPrice(item.itemId).call();
           items.push({
             totalPrice,
             itemId: item.itemId,
@@ -179,7 +185,7 @@ const Home = ({ marketplace, account, sendTra }) => {
 
   const viewMarketItem = async (item) => {
 
-    const owneris = await marketplace.getOwner(item.itemId).call();
+    const owneris = await marketplace.methods.getOwner(item.itemId).call();
     console.log("The Owner is", owneris);
     console.log("Connected is ", account);
     if (account) {
@@ -190,42 +196,76 @@ const Home = ({ marketplace, account, sendTra }) => {
     }
 
     try {
-      const tx = await sendTra(owneris, item.totalPrice);
-      await new Promise(resolve => setTimeout(resolve, 5000));
-      console.log("This is TX", tx);
+      // const tx = await sendTra(owneris, item.totalPrice);
+      // await new Promise(resolve => setTimeout(resolve, 5000));
+      // console.log("This is TX", tx);
+      const web3 = new Web3(window.ethereum);
+      const txObject = {
+        from: account, // Use the default account provided by MetaMask or set it explicitly
+        // from: web3.eth.defaultAccount, // Use the default account provided by MetaMask or set it explicitly
+        to: owneris,
+        value: item.totalPrice,
+      };
+      web3.eth
+        .sendTransaction(txObject)
+        .on("transactionHash", async function (hash) {
+          console.log("Transaction sent successfully. Hash:", hash);
+          console.log("code is not present result");
+          // if (tx) {
+            const response = await marketplace.methods.seeNFT(item.itemId).call();
+            // const uri = await response.wait(); // Wait for the transaction to complete
 
-      if (tx.code) {
-        if (tx.code.toString() === 'CONTRACT_VALIDATE_ERROR') {
+            // const links=await marketplace.tokenURIs(item.itemId).call();
+            const links = response;
+            console.log("Links", links);
+            const responses = await fetch(links);
+            // console.log("Result",result);
+            const result = await responses.json();
+            console.log("Result", result);
+            // console.log("This is tx code", tx.code);
+            await delay(2000);
+            setToggle(true); // Set toggle to true to show Info component
+            // loadMarketplaceItems();
+            setNftitem(result);
+          // }
+          // else {
+          //   toast.error("Transaction failed")
+          // }
+        })
+        .on("error", function (error) {
+          console.error("Error sending transaction:", error);
+        });
 
-          // toast.error("Transaction faileds")
-          throw 'error'
-        }
-      }
-      else {
-        console.log("code is not present result");
-        if (tx) {
+      // if (tx.code) {
+      //   if (tx.code.toString() === 'CONTRACT_VALIDATE_ERROR') {
 
+      //     // toast.error("Transaction faileds")
+      //     throw 'error'
+      //   }
+      // }
+      // else {
+      //   console.log("code is not present result");
+      //   if (tx) {
+      //     const response = await marketplace.methods.seeNFT(item.itemId).call();
+      //     // const uri = await response.wait(); // Wait for the transaction to complete
 
-          const response = await marketplace.seeNFT(item.itemId).call();
-          // const uri = await response.wait(); // Wait for the transaction to complete
-
-          // const links=await marketplace.tokenURIs(item.itemId).call();
-          const links = response;
-          console.log("Links", links);
-          const responses = await fetch(links);
-          // console.log("Result",result);
-          const result = await responses.json();
-          console.log("Result", result);
-          console.log("This is tx code", tx.code);
-          await delay(2000);
-          setToggle(true); // Set toggle to true to show Info component
-          // loadMarketplaceItems();
-          setNftitem(result);
-        }
-        else {
-          toast.error("Transaction failed")
-        }
-      }
+      //     // const links=await marketplace.tokenURIs(item.itemId).call();
+      //     const links = response;
+      //     console.log("Links", links);
+      //     const responses = await fetch(links);
+      //     // console.log("Result",result);
+      //     const result = await responses.json();
+      //     console.log("Result", result);
+      //     console.log("This is tx code", tx.code);
+      //     await delay(2000);
+      //     setToggle(true); // Set toggle to true to show Info component
+      //     // loadMarketplaceItems();
+      //     setNftitem(result);
+      //   }
+      //   else {
+      //     toast.error("Transaction failed")
+      //   }
+      // }
 
     } catch (error) {
       console.log(error);
@@ -251,6 +291,7 @@ const Home = ({ marketplace, account, sendTra }) => {
 
   return (
     <>
+    {!connectedNetwork && <ChangeNetwork/>}
       {toggle ? (
         <Info Changestate={() => setToggle(false)} nftitem={nftitem} />
       ) : (
@@ -265,14 +306,15 @@ const Home = ({ marketplace, account, sendTra }) => {
                       src={item.image}
                       alt={item.name}
                     />
+                    {/* {console.log(item)} */}
                     <div className="p-4">
                       <h5 className="text-xl font-semibold text-blue-600 dark:text-blue-400">{item.name}</h5>
                       <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
                         {/* <strong>1 TRX</strong> */}
-                        <strong>{item.totalPrice}</strong>
+                        <strong>{Number(item.totalPrice)} TRX</strong>
                       </p>
 
-                      <button onClick={() => viewMarketItem(item)} className="mt-4 w-full px-4 py-2 text-sm font-medium leading-5 text-white transition-transform transform duration-300 bg-gradient-to-r from-blue-500 to-purple-600 border border-transparent rounded-lg shadow-lg hover:scale-105 hover:from-blue-600 hover:to-purple-700 focus:outline-none focus:ring-4 focus:ring-blue-300">
+                      {connectedNetwork && <button onClick={() => viewMarketItem(item)} className="mt-4 w-full px-4 py-2 text-sm font-medium leading-5 text-white transition-transform transform duration-300 bg-gradient-to-r from-blue-500 to-purple-600 border border-transparent rounded-lg shadow-lg hover:scale-105 hover:from-blue-600 hover:to-purple-700 focus:outline-none focus:ring-4 focus:ring-blue-300">
                         Play
                         <svg
                           className="rtl:rotate-180 w-4 h-4 inline-block ml-2 -mt-px"
@@ -288,7 +330,7 @@ const Home = ({ marketplace, account, sendTra }) => {
                             d="M1 5h12m0 0L9 1m4 4L9 9"
                           />
                         </svg>
-                      </button>
+                      </button>}
                     </div>
                   </div>
                 ))}
